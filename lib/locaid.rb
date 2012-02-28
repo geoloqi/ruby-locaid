@@ -1,5 +1,6 @@
 require 'locaid/phone'
 require 'locaid/error'
+require 'locaid/api_error'
 require 'locaid/version'
 require 'savon'
 require 'hashie'

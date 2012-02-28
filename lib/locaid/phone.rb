@@ -10,7 +10,9 @@ module Locaid
     # CANCELLED, means that the requested msisdn is unsubscribed from that classId.
     # OPTIN_COMPLETE, means that the requested msisdn is subscribed to that classId.
 
-    def status
+    def status(cache=true)
+      return @status if @status && cache
+
       resp = request :registration_services, :get_phone_status, {
         msisdn_list:     [@msisdn]
       }
@@ -22,17 +24,38 @@ module Locaid
       else
         raise Error, 'could not process status response'
       end
-      status.downcase.to_sym
+
+      @status = status.downcase.to_sym
     end
 
-    def opt_in
-      resp = request :registration_services, :subscribePhone, {
+    def opted_in?;        status == :optin_complete  end
+    def optin_pending?;   status == :optin_pending   end
+    def optin_cancelled?; status == :optin_cancelled end
+    def opted_in?;        status == :optin_complete  end
+
+    def send_optin_request
+      resp = request :registration_services, :subscribe_phone, {
         command: 'OPTIN',
         class_id_list: [{
           class_id: Locaid.defaults[:application_id],
           msisdn_list: [@msisdn],
         }]
       }
+
+      resp[:class_id_list][:msisdn_list][:status] == 'OK'
+    end
+
+    def current_location(accuracy=:agps)
+      accuracy = accuracy.to_sym
+      raise "accuracy must be agps or celltower, you provided #{accuracy}" if ![:agps, :celltower].include?(accuracy)
+      res = request :latitude_longitude_services, :get_locations_x, {
+        class_id: Locaid.defaults[:application_id],
+        msisdn_list:     [@msisdn],
+        location_method: 'A-GPS', #(accuracy == :agps ? 'MOST_ACCURATE' : 'LEAST_EXPENSIVE'),
+        coor_type:       'DECIMAL',
+        sync_type:       'syn' # This can be made async with some work, if needed
+      }
+      res
     end
 
     private
@@ -45,9 +68,21 @@ module Locaid
       end
 
       res = savon_request resource, meth, body_args
+
       res = res.body["#{meth}_response".to_sym][:return]
-      puts res.inspect
-      raise Locaid::ApiError.new(res[:error][:error_code], res[:error][:error_message], res[:error][:transaction_id]) if res[:error]
+
+      error = nil
+      error = res[:error]
+
+      if res[:class_id_list]
+        error = res[:class_id_list][:error] if res[:class_id_list][:error]
+        error = res[:class_id_list][:msisdn_list][:error] if res[:class_id_list][:msisdn_list] && res[:class_id_list][:msisdn_list][:error]
+      end
+
+      if error
+        raise Locaid::ApiError.new(error[:error_code], error[:error_message], error[:transaction_id])
+      end
+
       res
     end
 
