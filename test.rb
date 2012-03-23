@@ -14,9 +14,7 @@ Locaid.defaults $config
 phone = Locaid::Phone.from_phone_number 'PHONE_NUMBER_GOES_HERE'
 
 if phone.opted_in? || phone.optin_pending?
-  puts "GETTING LOCATION"
   puts phone.current_location
 else
-  puts "SENDING OPTIN REQUEST"
   puts phone.send_optin_request
 end

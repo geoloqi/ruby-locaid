@@ -114,7 +114,8 @@ module Locaid
     end
 
     def savon_client(resource_name)
-      Savon::Client.new { wsdl.document = "#{BASE_WSDL_URL}/#{resource_name.to_s.camelcase}?wsdl" }
+      wsdl_url = "#{BASE_WSDL_URL}/#{resource_name.to_s.camelcase}?wsdl"
+      Savon::Client.new(Locaid.defaults[:cache] == false ? wsdl_url : Locaid.wsdl_cache(wsdl_url))
     end
   end
 

@@ -21,4 +21,5 @@ Gem::Specification.new do |s|
   s.add_dependency 'geoloqi'
   s.add_dependency 'savon'
   s.add_dependency 'hashie'
+  s.add_dependency 'rest-client'
 end
