@@ -85,28 +85,26 @@ module Locaid
 
       res = res.body["#{meth}_response".to_sym][:return]
 
-      error = nil
+      error = nil 
       error = res[:error]
 
       if res[:class_id_list]
         error = res[:class_id_list][:error] if res[:class_id_list][:error]
         error = res[:class_id_list][:msisdn_list][:error] if res[:class_id_list][:msisdn_list] && res[:class_id_list][:msisdn_list][:error]
 
-        if error
-          raise Locaid::ApiError.new error[:error_code].to_i, error[:error_message], error[:transaction_id]
-        end
-
       elsif res[:msisdn_error]
         error_message = res[:msisdn_error][:error_message]
 
         if error_message =~ /not subscribed/
           error_message = "the provided phone number has not opted in, cannot get current location"
-        end
+        end 
 
-        raise Locaid::ApiError.new res[:msisdn_error][:error_code].to_i, error_message, res[:transaction_id]
-      end
+        error = {error_code: res[:msisdn_error][:error_code].to_i, error_message: error_message, transaction_id: res[:transaction_id]}
+      end 
 
-      res
+      raise Locaid::ApiError.new error[:error_code].to_i, error[:error_message], error[:transaction_id] if error
+
+      res 
     end
 
     def savon_request(resource_name, meth, body_args)
