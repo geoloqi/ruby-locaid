@@ -21,7 +21,4 @@ Gem::Specification.new do |s|
   s.add_dependency 'geoloqi'
   s.add_dependency 'savon'
   s.add_dependency 'hashie'
-
-  s.add_development_dependency "ruby-debug19"
-  # s.add_runtime_dependency "rest-client"
 end

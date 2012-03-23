@@ -1,9 +1,25 @@
 module Locaid
   class Phone
+    def self.phone_number_to_msisdn(number)
+      number = number.to_s
+      number.gsub! /[^0-9]/, ''
+      number = "1#{number}" if number.length == 10
+      number
+    end
+
+    # Locaid::Phone.from_phone_number attempts to convert a normal number to msisdn (which is what Locaid::Phone.new accepts).
+    #
+    # This strips out any non-number characters. It will also add a 1 to the front of the number if the size is 10 characters, 
+    # with the assumption that it is a US number.
+    #
+    # It may be helpful to convert the characters to their respective numbers as well.
+    def self.from_phone_number(number)
+      new phone_number_to_msisdn(number)
+    end
+
     def initialize(msisdn)
       @msisdn = msisdn
     end
-
 
     # NONE, means that the requested msisdn has no previous OPTIN record.
     # OPTIN_PENDING, means that the OPTIN command for that classID was given, but no YES/NO response was given.
@@ -45,13 +61,11 @@ module Locaid
       resp[:class_id_list][:msisdn_list][:status] == 'OK'
     end
 
-    def current_location(accuracy=:agps)
-      accuracy = accuracy.to_sym
-      raise "accuracy must be agps or celltower, you provided #{accuracy}" if ![:agps, :celltower].include?(accuracy)
+    def current_location(high_accuracy=true)
       res = request :latitude_longitude_services, :get_locations_x, {
         class_id: Locaid.defaults[:application_id],
         msisdn_list:     [@msisdn],
-        location_method: 'A-GPS', #(accuracy == :agps ? 'MOST_ACCURATE' : 'LEAST_EXPENSIVE'),
+        location_method: (high_accuracy ? 'MOST_ACCURATE' : 'LEAST_EXPENSIVE'),
         coor_type:       'DECIMAL',
         sync_type:       'syn' # This can be made async with some work, if needed
       }
@@ -77,10 +91,19 @@ module Locaid
       if res[:class_id_list]
         error = res[:class_id_list][:error] if res[:class_id_list][:error]
         error = res[:class_id_list][:msisdn_list][:error] if res[:class_id_list][:msisdn_list] && res[:class_id_list][:msisdn_list][:error]
-      end
 
-      if error
-        raise Locaid::ApiError.new(error[:error_code], error[:error_message], error[:transaction_id])
+        if error
+          raise Locaid::ApiError.new error[:error_code].to_i, error[:error_message], error[:transaction_id]
+        end
+
+      elsif res[:msisdn_error]
+        error_message = res[:msisdn_error][:error_message]
+
+        if error_message =~ /not subscribed/
+          error_message = "the provided phone number has not opted in, cannot get current location"
+        end
+
+        raise Locaid::ApiError.new res[:msisdn_error][:error_code].to_i, error_message, res[:transaction_id]
       end
 
       res
