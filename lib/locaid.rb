@@ -12,8 +12,12 @@ module Locaid
   class << self
     def defaults(hash={})
       @defaults ||= {}
-      return @defaults if hash.empty?
-      @defaults = hash
+
+      if hash.empty?
+        return @defaults
+      else
+        @defaults = hash.inject({}){|memo,(k,v)| memo[k.to_sym] = v; memo}
+      end
     end
   end
 end
