@@ -3,6 +3,7 @@ A ruby gem for working with the Locaid location API.
 
 ## Example
 
+    ```ruby
     require 'bundler/setup'
     Bundler.require
     require './lib/locaid.rb'
@@ -17,3 +18,4 @@ A ruby gem for working with the Locaid location API.
     else
       puts phone.send_optin_request
     end
+    ```
