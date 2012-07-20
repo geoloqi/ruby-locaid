@@ -8,6 +8,12 @@ require 'hashie/mash'
 require 'thread'
 require 'rest-client'
 
+unless $locaid_debug
+  Savon.configure do |config|
+    config.log = false
+  end
+end
+
 module Locaid
   BASE_WSDL_URL = 'https://ws.loc-aid.net:443/webservice'
   @@wsdl_cache = {}
